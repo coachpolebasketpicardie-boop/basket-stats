@@ -17,6 +17,10 @@ def test_free_throw_pct_arrondi():
     assert free_throw_pct(2, 3) == 66.7
 
 
+def test_free_throw_pct_aucun_lancer():
+    assert free_throw_pct(0, 0) == 0.0
+
+
 def test_moyenne_points():
     assert moyenne_points([12, 18, 15]) == 15.0
 
