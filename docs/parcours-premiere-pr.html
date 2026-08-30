@@ -1,0 +1,612 @@
+<title>Ta première pull request</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+
+<style>
+  :root {
+    --bg: #F6F7F9;
+    --surface: #FFFFFF;
+    --surface-sunk: #F0F2F5;
+    --ink: #1B212B;
+    --ink-soft: #5A6472;
+    --ink-faint: #8A93A0;
+    --line: #E1E5EB;
+    --line-strong: #CDD3DB;
+    --accent: #C85C29;
+    --accent-soft: #F5E4D8;
+    --merge: #2E8B57;
+    --merge-soft: #DCEEE3;
+    --term-bg: #1E232B;
+    --term-ink: #E7EAEE;
+    --term-dim: #99A2AE;
+    --term-accent: #E8926A;
+    --shadow: 0 1px 2px rgba(20, 26, 35, .04), 0 8px 24px rgba(20, 26, 35, .05);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #131519;
+      --surface: #1A1D23;
+      --surface-sunk: #22262E;
+      --ink: #E7EAEE;
+      --ink-soft: #9BA4B0;
+      --ink-faint: #6C7480;
+      --line: #2A2F38;
+      --line-strong: #3A414C;
+      --accent: #E8926A;
+      --accent-soft: #33241C;
+      --merge: #55B586;
+      --merge-soft: #1C2C24;
+      --term-bg: #0F1216;
+      --term-ink: #E7EAEE;
+      --term-dim: #8A93A0;
+      --term-accent: #E8926A;
+      --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 10px 30px rgba(0, 0, 0, .35);
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --bg: #131519;
+    --surface: #1A1D23;
+    --surface-sunk: #22262E;
+    --ink: #E7EAEE;
+    --ink-soft: #9BA4B0;
+    --ink-faint: #6C7480;
+    --line: #2A2F38;
+    --line-strong: #3A414C;
+    --accent: #E8926A;
+    --accent-soft: #33241C;
+    --merge: #55B586;
+    --merge-soft: #1C2C24;
+    --term-bg: #0F1216;
+    --term-ink: #E7EAEE;
+    --term-dim: #8A93A0;
+    --term-accent: #E8926A;
+    --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 10px 30px rgba(0, 0, 0, .35);
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "IBM Plex Sans", system-ui, -apple-system, sans-serif;
+    font-size: 17px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap {
+    max-width: 780px;
+    margin: 0 auto;
+    padding: clamp(2rem, 5vw, 4.5rem) clamp(1.1rem, 4vw, 2rem) 5rem;
+  }
+
+  /* ---- Masthead ---- */
+  .masthead { margin-bottom: 3.5rem; }
+
+  .kicker {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: .72rem;
+    font-weight: 500;
+    letter-spacing: .16em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 1rem;
+  }
+
+  h1 {
+    font-family: "IBM Plex Mono", monospace;
+    font-weight: 600;
+    font-size: clamp(1.9rem, 5.5vw, 2.7rem);
+    line-height: 1.12;
+    letter-spacing: -.02em;
+    text-wrap: balance;
+    margin: 0 0 1.1rem;
+  }
+
+  .standfirst {
+    font-size: 1.08rem;
+    color: var(--ink-soft);
+    max-width: 60ch;
+    margin: 0 0 1.8rem;
+  }
+
+  .repochip {
+    display: inline-flex;
+    align-items: center;
+    gap: .6rem;
+    flex-wrap: wrap;
+    font-family: "IBM Plex Mono", monospace;
+    font-size: .82rem;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 3px;
+    padding: .5rem .8rem;
+    color: var(--ink-soft);
+  }
+  .repochip b { color: var(--ink); font-weight: 600; }
+  .repochip .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--merge); display: inline-block; }
+  .repochip .merged { color: var(--merge); font-weight: 600; }
+
+  /* ---- Phase ---- */
+  .phase { margin-top: 3.2rem; }
+  .phase:first-of-type { margin-top: 0; }
+
+  .phase-head {
+    display: flex;
+    align-items: baseline;
+    gap: .8rem;
+    padding-bottom: .7rem;
+    border-bottom: 2px solid var(--line-strong);
+    margin-bottom: 0;
+  }
+  .phase-num {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: .78rem;
+    font-weight: 600;
+    color: var(--accent);
+    letter-spacing: .05em;
+  }
+  .phase-head h2 {
+    font-family: "IBM Plex Mono", monospace;
+    font-weight: 600;
+    font-size: 1.15rem;
+    letter-spacing: -.01em;
+    margin: 0;
+    flex: 1;
+  }
+  .phase-note {
+    font-size: .8rem;
+    color: var(--ink-faint);
+    font-style: italic;
+  }
+
+  /* ---- Steps ---- */
+  ol.steps { list-style: none; margin: 0; padding: 0; }
+
+  li.step {
+    display: grid;
+    grid-template-columns: 2.4rem 1fr;
+    gap: 0 1rem;
+    padding: 1.5rem 0;
+    border-bottom: 1px solid var(--line);
+  }
+  li.step:last-child { border-bottom: none; }
+
+  .step-n {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: .85rem;
+    font-weight: 600;
+    color: var(--ink-faint);
+    padding-top: .1rem;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .step-body { min-width: 0; }
+
+  .step-title {
+    font-weight: 600;
+    font-size: 1.02rem;
+    margin: 0 0 .3rem;
+    letter-spacing: -.005em;
+  }
+  .step-what {
+    color: var(--ink-soft);
+    font-size: .93rem;
+    margin: 0 0 .8rem;
+  }
+  .step-what code {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: .84em;
+    background: var(--surface-sunk);
+    padding: .1em .35em;
+    border-radius: 3px;
+    color: var(--ink);
+  }
+
+  /* ---- Terminal block ---- */
+  .term {
+    background: var(--term-bg);
+    border-radius: 5px;
+    padding: .85rem 1rem;
+    overflow-x: auto;
+    font-family: "IBM Plex Mono", monospace;
+    font-size: .82rem;
+    line-height: 1.7;
+  }
+  .term-line { white-space: pre; color: var(--term-ink); }
+  .term-line .pr { color: var(--term-accent); user-select: none; }
+  .term-line .cm { color: var(--term-dim); }
+  .term-line.out { color: var(--term-dim); }
+  .term-line.ok { color: #7FC99B; }
+
+  /* ---- Git graph ---- */
+  .graph-section {
+    margin-top: 3.2rem;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 1.6rem;
+    box-shadow: var(--shadow);
+  }
+  .graph-section h2 {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 1rem;
+    font-weight: 600;
+    margin: 0 0 .4rem;
+  }
+  .graph-section > p {
+    font-size: .9rem;
+    color: var(--ink-soft);
+    margin: 0 0 1.3rem;
+  }
+  .graph {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: .82rem;
+    line-height: 1.5;
+    overflow-x: auto;
+  }
+  .graph pre { margin: 0; white-space: pre; }
+  .graph .g { color: var(--accent); }
+  .graph .h { color: var(--ink-faint); }
+  .graph .merge-lbl { color: var(--merge); font-weight: 600; }
+  .graph .ref { color: var(--ink-soft); }
+
+  /* ---- Glossary ---- */
+  .glossary { margin-top: 3.2rem; }
+  .glossary h2 {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 1rem;
+    font-weight: 600;
+    padding-bottom: .7rem;
+    border-bottom: 2px solid var(--line-strong);
+    margin: 0 0 .5rem;
+  }
+  .glossary dl {
+    margin: 0;
+    display: grid;
+    grid-template-columns: minmax(7rem, max-content) 1fr;
+    gap: 0;
+  }
+  .glossary dt {
+    font-family: "IBM Plex Mono", monospace;
+    font-weight: 600;
+    font-size: .88rem;
+    padding: .8rem 1rem .8rem 0;
+    border-bottom: 1px solid var(--line);
+    color: var(--accent);
+  }
+  .glossary dd {
+    margin: 0;
+    padding: .8rem 0;
+    border-bottom: 1px solid var(--line);
+    font-size: .93rem;
+    color: var(--ink-soft);
+  }
+  .glossary dl > dt:last-of-type,
+  .glossary dl > dd:last-of-type { border-bottom: none; }
+
+  /* ---- Next ---- */
+  .next {
+    margin-top: 3.2rem;
+    background: var(--accent-soft);
+    border-radius: 6px;
+    padding: 1.5rem 1.6rem;
+  }
+  .next h2 {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 1rem;
+    font-weight: 600;
+    margin: 0 0 .5rem;
+  }
+  .next p { margin: 0; font-size: .95rem; color: var(--ink-soft); }
+  .next p + p { margin-top: .6rem; }
+  .next code {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: .84em;
+    background: var(--surface);
+    padding: .1em .4em;
+    border-radius: 3px;
+    color: var(--ink);
+  }
+
+  .cycle-strip {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: .8rem;
+    color: var(--ink-soft);
+    margin-top: 1.4rem;
+    padding-top: 1.2rem;
+    border-top: 1px dashed var(--line-strong);
+    line-height: 2;
+  }
+  .cycle-strip b { color: var(--accent); font-weight: 600; }
+
+  @media (max-width: 480px) {
+    body { font-size: 16px; }
+    li.step { grid-template-columns: 1.8rem 1fr; gap: 0 .7rem; }
+    .glossary dl { grid-template-columns: 1fr; }
+    .glossary dt { border-bottom: none; padding-bottom: .2rem; }
+    .glossary dd { padding-top: .2rem; }
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .phase, .graph-section, .glossary, .next { animation: rise .5s ease both; }
+    @keyframes rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+  }
+</style>
+
+<div class="wrap">
+
+  <header class="masthead">
+    <p class="kicker">Ce qu'on vient de faire, étape par étape</p>
+    <h1>Ta première pull request</h1>
+    <p class="standfirst">
+      De « dossier vide » à « PR fusionnée », voici le parcours complet réalisé ensemble.
+      Chaque étape&nbsp;: ce qui s'est passé, la commande réelle, et ce qu'elle produit.
+    </p>
+    <span class="repochip">
+      <span class="dot"></span>
+      dépôt&nbsp;<b>coachpolebasketpicardie-boop/basket-stats</b>&nbsp;·&nbsp;privé&nbsp;·&nbsp;<span class="merged">PR #1 fusionnée</span>
+    </span>
+  </header>
+
+  <!-- PHASE 1 -->
+  <section class="phase">
+    <div class="phase-head">
+      <span class="phase-num">01</span>
+      <h2>Connecter la machine à GitHub</h2>
+      <span class="phase-note">une seule fois</span>
+    </div>
+    <ol class="steps">
+
+      <li class="step">
+        <span class="step-n">01</span>
+        <div class="step-body">
+          <p class="step-title">Créer le compte GitHub</p>
+          <p class="step-what">Fait dans le navigateur, sur <code>github.com/signup</code>. Ton identifiant public&nbsp;: <code>coachpolebasketpicardie-boop</code>.</p>
+        </div>
+      </li>
+
+      <li class="step">
+        <span class="step-n">02</span>
+        <div class="step-body">
+          <p class="step-title">Installer et connecter <code>gh</code> (le CLI GitHub)</p>
+          <p class="step-what">Le binaire a été posé dans <code>~/.local/bin</code> et ajouté au <code>PATH</code>. Puis <code>gh auth login</code> ouvre le navigateur pour autoriser ta machine.</p>
+          <div class="term">
+            <div class="term-line"><span class="pr">$ </span>gh auth login</div>
+            <div class="term-line out">? GitHub.com  ·  HTTPS  ·  Login with a web browser</div>
+            <div class="term-line out">! First copy your one-time code: <span style="color:var(--term-accent)">AB12-CD34</span></div>
+            <div class="term-line ok">✓ Logged in as coachpolebasketpicardie-boop</div>
+          </div>
+        </div>
+      </li>
+
+      <li class="step">
+        <span class="step-n">03</span>
+        <div class="step-body">
+          <p class="step-title">Régler ton identité Git</p>
+          <p class="step-what">Chaque commit est signé d'un nom et d'un email. On a utilisé l'adresse « noreply » de GitHub pour ne pas exposer ton vrai email dans l'historique public.</p>
+          <div class="term">
+            <div class="term-line"><span class="pr">$ </span>git config --global user.name "Coach.dude"</div>
+            <div class="term-line"><span class="pr">$ </span>git config --global user.email "322569028+coachpolebasketpicardie-boop@users.noreply.github.com"</div>
+          </div>
+        </div>
+      </li>
+
+    </ol>
+  </section>
+
+  <!-- PHASE 2 -->
+  <section class="phase">
+    <div class="phase-head">
+      <span class="phase-num">02</span>
+      <h2>Poser le projet</h2>
+      <span class="phase-note">le point de départ</span>
+    </div>
+    <ol class="steps">
+
+      <li class="step">
+        <span class="step-n">04</span>
+        <div class="step-body">
+          <p class="step-title">Créer les fichiers</p>
+          <p class="step-what">Un mini-projet Python&nbsp;: <code>basket_stats.py</code> (3&nbsp;fonctions de stats), <code>test_basket_stats.py</code> (6&nbsp;tests), <code>README.md</code>, et <code>.gitignore</code> qui exclut le dossier <code>.venv/</code>.</p>
+        </div>
+      </li>
+
+      <li class="step">
+        <span class="step-n">05</span>
+        <div class="step-body">
+          <p class="step-title">Lancer les tests</p>
+          <p class="step-what">On vérifie que tout marche avant d'enregistrer quoi que ce soit.</p>
+          <div class="term">
+            <div class="term-line"><span class="pr">$ </span>pytest -q</div>
+            <div class="term-line out">......                    [100%]</div>
+            <div class="term-line ok">6 passed in 0.02s</div>
+          </div>
+        </div>
+      </li>
+
+      <li class="step">
+        <span class="step-n">06</span>
+        <div class="step-body">
+          <p class="step-title">Initialiser le dépôt Git</p>
+          <p class="step-what"><code>git init</code> crée le dossier caché <code>.git/</code>&nbsp;: à partir de là, Git suit l'historique du projet.</p>
+          <div class="term">
+            <div class="term-line"><span class="pr">$ </span>git init</div>
+          </div>
+        </div>
+      </li>
+
+      <li class="step">
+        <span class="step-n">07</span>
+        <div class="step-body">
+          <p class="step-title">Premier commit</p>
+          <p class="step-what"><code>git add .</code> sélectionne les fichiers, <code>git commit</code> fige la première « photo » du projet, sur la branche <code>master</code>.</p>
+          <div class="term">
+            <div class="term-line"><span class="pr">$ </span>git add .</div>
+            <div class="term-line"><span class="pr">$ </span>git commit -m "Projet initial : fonctions de stats basket + tests"</div>
+            <div class="term-line out">[master (root-commit) <span style="color:var(--term-accent)">d811edd</span>] 4 files changed, 91 insertions(+)</div>
+          </div>
+        </div>
+      </li>
+
+      <li class="step">
+        <span class="step-n">08</span>
+        <div class="step-body">
+          <p class="step-title">Créer le dépôt sur GitHub et pousser</p>
+          <p class="step-what">Une seule commande crée le dépôt distant, le relie sous le nom <code>origin</code>, et envoie <code>master</code>.</p>
+          <div class="term">
+            <div class="term-line"><span class="pr">$ </span>gh repo create basket-stats --private --source=. --remote=origin --push</div>
+            <div class="term-line ok">✓ Created repository coachpolebasketpicardie-boop/basket-stats on GitHub</div>
+            <div class="term-line ok">✓ Pushed commits to https://github.com/…/basket-stats.git</div>
+          </div>
+        </div>
+      </li>
+
+    </ol>
+  </section>
+
+  <!-- PHASE 3 -->
+  <section class="phase">
+    <div class="phase-head">
+      <span class="phase-num">03</span>
+      <h2>Le cycle d'une pull request</h2>
+      <span class="phase-note">à répéter à chaque changement</span>
+    </div>
+    <ol class="steps">
+
+      <li class="step">
+        <span class="step-n">09</span>
+        <div class="step-body">
+          <p class="step-title">Créer une branche</p>
+          <p class="step-what">On travaille à côté, sans toucher à <code>master</code>. Tant que rien n'est fusionné, la version « officielle » reste intacte.</p>
+          <div class="term">
+            <div class="term-line"><span class="pr">$ </span>git checkout -b ajout-test-lancers-francs-zero</div>
+            <div class="term-line out">Switched to a new branch 'ajout-test-lancers-francs-zero'</div>
+          </div>
+        </div>
+      </li>
+
+      <li class="step">
+        <span class="step-n">10</span>
+        <div class="step-body">
+          <p class="step-title">Faire la modification, puis revérifier</p>
+          <p class="step-what">Ajout d'un test&nbsp;: <code>test_free_throw_pct_aucun_lancer</code> (+4&nbsp;lignes dans le fichier de tests, aucun code de production touché). On relance <code>pytest</code>.</p>
+          <div class="term">
+            <div class="term-line"><span class="pr">$ </span>pytest -q</div>
+            <div class="term-line ok">7 passed in 0.02s</div>
+          </div>
+        </div>
+      </li>
+
+      <li class="step">
+        <span class="step-n">11</span>
+        <div class="step-body">
+          <p class="step-title">Enregistrer le changement (commit)</p>
+          <p class="step-what">Une nouvelle « photo », sur la branche cette fois.</p>
+          <div class="term">
+            <div class="term-line"><span class="pr">$ </span>git commit -am "Ajoute un test pour free_throw_pct sans lancer tenté"</div>
+            <div class="term-line out">[ajout-test-lancers-francs-zero <span style="color:var(--term-accent)">5bd5710</span>] 1 file changed, 4 insertions(+)</div>
+          </div>
+        </div>
+      </li>
+
+      <li class="step">
+        <span class="step-n">12</span>
+        <div class="step-body">
+          <p class="step-title">Pousser la branche sur GitHub</p>
+          <p class="step-what">La branche existe maintenant aussi côté distant. GitHub propose déjà un lien pour ouvrir la PR.</p>
+          <div class="term">
+            <div class="term-line"><span class="pr">$ </span>git push -u origin ajout-test-lancers-francs-zero</div>
+            <div class="term-line out">* [new branch]  ajout-test-lancers-francs-zero -&gt; ajout-test-lancers-francs-zero</div>
+          </div>
+        </div>
+      </li>
+
+      <li class="step">
+        <span class="step-n">13</span>
+        <div class="step-body">
+          <p class="step-title">Ouvrir la pull request</p>
+          <p class="step-what">« Voici ma branche <code>ajout-test-…</code>, comparez-la à <code>master</code> et intégrez-la. » GitHub affiche le diff ligne par ligne.</p>
+          <div class="term">
+            <div class="term-line"><span class="pr">$ </span>gh pr create --base master --title "…" --body "…"</div>
+            <div class="term-line ok">https://github.com/coachpolebasketpicardie-boop/basket-stats/pull/1</div>
+          </div>
+        </div>
+      </li>
+
+      <li class="step">
+        <span class="step-n">14</span>
+        <div class="step-body">
+          <p class="step-title">Relire et fusionner</p>
+          <p class="step-what">Sur GitHub&nbsp;: onglet <em>Files changed</em> pour voir les 4&nbsp;lignes vertes, puis bouton <em>Merge pull request</em>. Un <em>commit de merge</em> est créé sur <code>master</code>.</p>
+          <div class="term">
+            <div class="term-line out">Merge pull request #1 …  <span style="color:var(--term-accent)">fcdb96d</span></div>
+            <div class="term-line ok">✓ Merged · state: MERGED</div>
+          </div>
+        </div>
+      </li>
+
+      <li class="step">
+        <span class="step-n">15</span>
+        <div class="step-body">
+          <p class="step-title">Remettre le local à jour et nettoyer</p>
+          <p class="step-what">On récupère le merge dans le <code>master</code> local, puis on supprime la branche des deux côtés&nbsp;: elle a fait son travail.</p>
+          <div class="term">
+            <div class="term-line"><span class="pr">$ </span>git checkout master &amp;&amp; git pull</div>
+            <div class="term-line"><span class="pr">$ </span>git push origin --delete ajout-test-lancers-francs-zero &amp;&amp; git fetch --prune</div>
+            <div class="term-line out">- [deleted]  ajout-test-lancers-francs-zero</div>
+          </div>
+        </div>
+      </li>
+
+    </ol>
+  </section>
+
+  <!-- GIT GRAPH -->
+  <section class="graph-section">
+    <h2>L'historique, tel que Git le dessine</h2>
+    <p>C'est ce qu'affiche <code>git log --graph --oneline</code>. On lit de bas en haut&nbsp;: le projet, puis la branche qui part sur le côté, puis le point où elle rejoint <code>master</code>.</p>
+    <div class="graph">
+<pre><span class="g">*   </span><span class="h">fcdb96d</span>  <span class="ref">(HEAD -&gt; master, origin/master)</span>  <span class="merge-lbl">Merge pull request #1</span>
+<span class="g">|\  </span>
+<span class="g">| * </span><span class="h">5bd5710</span>  Ajoute un test pour free_throw_pct sans lancer tenté
+<span class="g">|/  </span>
+<span class="g">*   </span><span class="h">d811edd</span>  Projet initial : fonctions de stats basket + tests</pre>
+    </div>
+  </section>
+
+  <!-- GLOSSARY -->
+  <section class="glossary">
+    <h2>Les 6 mots</h2>
+    <dl>
+      <dt>dépôt</dt>
+      <dd>Le dossier du projet plus tout son historique. Local sur ta machine, et une copie sur GitHub (<code>origin</code>).</dd>
+      <dt>commit</dt>
+      <dd>Une modification enregistrée, avec un message et un identifiant court (<code>d811edd</code>). Une photo datée et légendée.</dd>
+      <dt>branche</dt>
+      <dd>Une ligne de travail parallèle. On y fait ses changements sans risque pour <code>master</code>.</dd>
+      <dt>push</dt>
+      <dd>Envoyer ses commits locaux vers GitHub. Rien n'arrive en ligne tant qu'on n'a pas poussé.</dd>
+      <dt>pull request</dt>
+      <dd>Une proposition d'intégrer une branche. GitHub montre le diff et sert de lieu de relecture.</dd>
+      <dt>merge</dt>
+      <dd>Intégrer la branche dans <code>master</code>. Le changement devient « officiel ».</dd>
+    </dl>
+  </section>
+
+  <!-- NEXT -->
+  <section class="next">
+    <h2>Et maintenant</h2>
+    <p>Le geste est toujours le même. Pour la PR&nbsp;#2, on recommence à l'étape&nbsp;09&nbsp;: une branche, un commit, un push, une PR, un merge, un nettoyage.</p>
+    <p>Première commande&nbsp;: <code>git checkout -b exemple-dans-le-readme</code></p>
+    <div class="cycle-strip">
+      <b>branche</b> &rarr; <b>commit</b> &rarr; <b>push</b> &rarr; <b>pull&nbsp;request</b> &rarr; <b>merge</b> &rarr; <b>nettoyage</b>
+    </div>
+  </section>
+
+</div>
