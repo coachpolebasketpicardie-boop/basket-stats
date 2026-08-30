@@ -1,0 +1,10 @@
+# Environnement virtuel Python
+.venv/
+
+# Caches Python
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# macOS
+.DS_Store
