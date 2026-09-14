@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1" />
+  <meta name="theme-color" content="#12182b" />
+  <title>Stats Match</title>
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="icon" href="icons/icon-192.png" />
+  <link rel="apple-touch-icon" href="icons/icon-192.png" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="match-info">
+      <input id="opponent" type="text" placeholder="Adversaire" maxlength="40" />
+      <input id="matchDate" type="date" />
+    </div>
+    <button id="newMatchBtn" class="icon-btn" title="Nouveau match">＋</button>
+  </header>
+
+  <nav class="tabs">
+    <button class="tab-btn active" data-tab="saisie">Saisie</button>
+    <button class="tab-btn" data-tab="rapport">Rapport</button>
+    <button class="tab-btn" data-tab="historique">Historique</button>
+  </nav>
+
+  <main id="app"></main>
+
+  <footer class="undo-bar">
+    <button id="undoBtn" disabled>↺ Annuler la dernière saisie</button>
+  </footer>
+
+  <div id="toast" class="toast" hidden></div>
+
+  <script src="app.js"></script>
+</body>
+</html>
