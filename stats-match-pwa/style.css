@@ -347,3 +347,62 @@ main#app {
   z-index: 20;
   box-shadow: 0 6px 20px rgba(0,0,0,0.4);
 }
+
+/* Export PDF (impression) */
+.print-header {
+  display: none;
+}
+
+@media print {
+  :root {
+    --bg: #ffffff;
+    --bg-elev: #f5f5f7;
+    --bg-elev-2: #ececee;
+    --border: #d6d6da;
+    --text: #111318;
+    --text-dim: #55586a;
+  }
+
+  body {
+    height: auto;
+  }
+
+  .topbar,
+  .tabs,
+  .undo-bar,
+  .toast,
+  .no-print {
+    display: none !important;
+  }
+
+  main#app {
+    overflow: visible;
+    padding: 0;
+  }
+
+  .print-header {
+    display: block;
+    margin-bottom: 16px;
+  }
+
+  .print-header h1 {
+    font-size: 18px;
+    margin: 0 0 4px;
+  }
+
+  .print-header .sub {
+    font-size: 12px;
+    color: var(--text-dim);
+  }
+
+  .report-section,
+  .stat-card,
+  .side-block,
+  table {
+    break-inside: avoid;
+  }
+
+  .bar-track {
+    background: var(--bg-elev-2);
+  }
+}

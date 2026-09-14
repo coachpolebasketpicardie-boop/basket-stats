@@ -244,11 +244,19 @@ function renderRapport() {
     : state.current;
   const off = computeSide(match.off);
   const def = computeSide(match.def);
+  const title = match.opponent ? `vs ${escapeHtml(match.opponent)}` : 'Match sans nom';
 
   return `
+    <div class="print-header">
+      <h1>Rapport de match — ${title}</h1>
+      <div class="sub">${match.date}</div>
+    </div>
+    <button id="exportPdfBtn" class="icon-btn no-print" style="width:100%;border-radius:12px;padding:12px;font-size:14px;font-weight:700;margin-bottom:14px;">
+      🖨️ Exporter en PDF
+    </button>
     ${
       viewingHistoryId
-        ? `<div class="empty-state" style="padding:10px 0;text-align:left;">Match du ${match.date}${match.opponent ? ' vs ' + match.opponent : ''} (historique)</div>`
+        ? `<div class="empty-state no-print" style="padding:10px 0;text-align:left;">Match du ${match.date}${match.opponent ? ' vs ' + match.opponent : ''} (historique)</div>`
         : ''
     }
     <div class="report-section">
@@ -369,6 +377,9 @@ function attachDynamicListeners() {
   });
   const saveBtn = document.getElementById('saveMatchBtn');
   if (saveBtn) saveBtn.addEventListener('click', saveMatchToHistory);
+
+  const exportBtn = document.getElementById('exportPdfBtn');
+  if (exportBtn) exportBtn.addEventListener('click', () => window.print());
 
   document.querySelectorAll('.history-actions [data-action="view"]').forEach((btn) => {
     btn.addEventListener('click', () => loadHistoryMatchReadonly(btn.dataset.id));
