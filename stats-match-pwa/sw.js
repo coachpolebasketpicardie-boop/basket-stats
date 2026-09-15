@@ -1,4 +1,4 @@
-const CACHE_NAME = 'stats-match-v1';
+const CACHE_NAME = 'stats-match-v2';
 const ASSETS = [
   './',
   './index.html',
@@ -26,16 +26,15 @@ self.addEventListener('activate', (event) => {
 
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
+  // Réseau en priorité (pour toujours servir la dernière version à jour),
+  // cache en secours si hors-ligne — pour l'usage pendant un match sans réseau.
   event.respondWith(
-    caches.match(event.request).then((cached) => {
-      const network = fetch(event.request)
-        .then((response) => {
-          const copy = response.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
-          return response;
-        })
-        .catch(() => cached);
-      return cached || network;
-    })
+    fetch(event.request)
+      .then((response) => {
+        const copy = response.clone();
+        caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
+        return response;
+      })
+      .catch(() => caches.match(event.request))
   );
 });

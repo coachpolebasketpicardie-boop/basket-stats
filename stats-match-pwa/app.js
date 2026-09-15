@@ -224,17 +224,23 @@ function renderSaisie() {
   `;
 }
 
-function compareRow(label, offVal, defVal, formatter) {
-  const offNum = offVal === null || offVal === undefined || Number.isNaN(offVal) ? 0 : offVal;
-  const defNum = defVal === null || defVal === undefined || Number.isNaN(defVal) ? 0 : defVal;
-  const total = offNum + defNum;
-  const offShare = total > 0 ? (offNum / total) * 100 : 50;
+function gaugeRow(side, val, formatter) {
+  const v = val === null || val === undefined || Number.isNaN(val) ? 0 : val;
+  const width = Math.max(0, Math.min(100, v * 100));
   return `
-    <div class="compare-row">
-      <span class="val off">${formatter(offVal)}</span>
-      <div class="bar-track"><div class="off-fill" style="width:${offShare}%"></div></div>
-      <span class="label">${label}</span>
-      <span class="val def">${formatter(defVal)}</span>
+    <div class="gauge-row">
+      <span class="gauge-label ${side}">${side === 'off' ? 'Nous' : 'Adv.'}</span>
+      <div class="gauge-track"><div class="gauge-fill ${side}" style="width:${width}%"></div></div>
+      <span class="gauge-val ${side}">${formatter(val)}</span>
+    </div>`;
+}
+
+function compareStat(title, offVal, defVal, formatter) {
+  return `
+    <div class="compare-stat">
+      <h4>${title}</h4>
+      ${gaugeRow('off', offVal, formatter)}
+      ${gaugeRow('def', defVal, formatter)}
     </div>`;
 }
 
@@ -277,10 +283,10 @@ function renderRapport() {
 
     <div class="report-section">
       <h3>Comparatif attaque / défense</h3>
-      ${compareRow('eFG%', off.efg, def.efg, pct)}
-      ${compareRow('FT Rate', off.ftRate, def.ftRate, pct)}
-      ${compareRow('Rebond off. %', off.orb, def.orb, pct)}
-      ${compareRow('Perte de balle %', off.tov, def.tov, pct)}
+      ${compareStat('eFG%', off.efg, def.efg, pct)}
+      ${compareStat('FT Rate', off.ftRate, def.ftRate, pct)}
+      ${compareStat('Rebond off. %', off.orb, def.orb, pct)}
+      ${compareStat('Perte de balle %', off.tov, def.tov, pct)}
     </div>
 
     <div class="report-section">
