@@ -12,6 +12,8 @@
   --good: #3ecf6a;
   --bad: #e05a4e;
   --radius: 14px;
+  --court-bg: #1a2238;
+  --court-line: #8d97b5;
 }
 
 * { box-sizing: border-box; }
@@ -379,6 +381,8 @@ main#app {
 
 @media print {
   :root {
+    --court-bg: #ffffff;
+    --court-line: #555a6e;
     --bg: #ffffff;
     --bg-elev: #f5f5f7;
     --bg-elev-2: #ececee;
@@ -430,3 +434,16 @@ main#app {
     background: var(--bg-elev-2);
   }
 }
+
+/* Carte des tirs */
+.court { width: 100%; height: auto; display: block; border-radius: 10px; touch-action: manipulation; }
+.hint { color: var(--text-dim); font-size: 12px; margin: 8px 0; text-align: center; }
+.seg { display: flex; gap: 8px; }
+.seg-btn { flex: 1; padding: 10px; border-radius: 10px; border: 1px solid var(--border); background: var(--bg-elev); color: var(--text-dim); font-weight: 700; font-size: 14px; }
+.seg-btn.active.off { background: var(--off-dim); color: var(--off); border-color: var(--off); }
+.seg-btn.active.def { background: var(--def-dim); color: var(--def); border-color: var(--def); }
+.shot-actions { display: flex; gap: 10px; margin-top: 10px; }
+.shot-btn { flex: 1; padding: 14px; border-radius: 12px; border: 1px solid var(--border); font-size: 16px; font-weight: 700; color: var(--text); background: var(--bg-elev-2); }
+.shot-btn.made:not(:disabled) { background: #1d3d2a; border-color: var(--good); color: var(--good); }
+.shot-btn.miss:not(:disabled) { background: #3d201d; border-color: var(--bad); color: var(--bad); }
+.shot-btn:disabled { opacity: 0.35; }

@@ -31,6 +31,7 @@ function emptyMatch() {
     date: new Date().toISOString().slice(0, 10),
     off: emptySide(),
     def: emptySide(),
+    shots: [],
   };
 }
 
@@ -39,6 +40,7 @@ function loadState() {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return { current: emptyMatch(), history: [], actionLog: [] };
     const parsed = JSON.parse(raw);
+    if (parsed.current && !parsed.current.shots) parsed.current.shots = [];
     return {
       current: parsed.current || emptyMatch(),
       history: parsed.history || [],
@@ -120,6 +122,7 @@ function undoLast() {
   if (!last) return;
   const s = state.current[last.side];
   if (s[last.key] > 0) s[last.key] -= 1;
+  if (last.shot) state.current.shots.pop();
   saveState();
   render();
 }
@@ -176,11 +179,114 @@ function showToast(msg) {
 
 function switchTab(tab) {
   activeTab = tab;
+  pendingShot = null;
   if (tab !== 'rapport') viewingHistoryId = null;
   document.querySelectorAll('.tab-btn').forEach((b) => {
     b.classList.toggle('active', b.dataset.tab === tab);
   });
   render();
+}
+
+// ---------- Carte des tirs (demi-terrain FIBA, 30 px = 1 m) ----------
+
+const COURT = { w: 450, h: 420, bx: 225, by: 47, r3: 202.5, cornerDx: 198, cornerEndY: 89.4 };
+
+function isThree(x, y) {
+  const dx = Math.abs(x - COURT.bx);
+  if (y <= COURT.cornerEndY) return dx >= COURT.cornerDx;
+  return Math.hypot(x - COURT.bx, y - COURT.by) >= COURT.r3;
+}
+
+function shotZone(x, y) {
+  if (isThree(x, y)) return y <= COURT.cornerEndY ? 'corner' : 'three';
+  const inPaint = x >= 151.5 && x <= 298.5 && y <= 174;
+  return inPaint ? 'paint' : 'mid';
+}
+
+const ZONES = [
+  { key: 'paint', label: 'Raquette' },
+  { key: 'mid', label: 'Mi-distance' },
+  { key: 'corner', label: '3 pts corner' },
+  { key: 'three', label: '3 pts hors corner' },
+];
+
+let shotSide = 'off';
+let pendingShot = null;
+
+function addShot(side, x, y, made) {
+  const three = isThree(x, y);
+  const key = made ? (three ? 'c' : 'a') : (three ? 'd' : 'b');
+  state.current[side][key] += 1;
+  state.current.shots.push({ side, x: Math.round(x), y: Math.round(y), made, three });
+  state.actionLog.push({ side, key, shot: true });
+  pendingShot = null;
+  saveState();
+  render();
+}
+
+function zoneStats(shots) {
+  return ZONES.map(({ key, label }) => {
+    const inZone = shots.filter((s) => shotZone(s.x, s.y) === key);
+    const made = inZone.filter((s) => s.made).length;
+    return { label, made, att: inZone.length, pct: inZone.length ? made / inZone.length : null };
+  });
+}
+
+function courtSvg(shots, pending) {
+  const line = 'fill="none" stroke="var(--court-line)" stroke-width="2"';
+  const dots = shots
+    .map((s) =>
+      s.made
+        ? `<circle cx="${s.x}" cy="${s.y}" r="7" fill="var(--good)" fill-opacity="0.85" stroke="#fff" stroke-width="1"/>`
+        : `<g stroke="var(--bad)" stroke-width="3" stroke-linecap="round"><line x1="${s.x - 5}" y1="${s.y - 5}" x2="${s.x + 5}" y2="${s.y + 5}"/><line x1="${s.x - 5}" y1="${s.y + 5}" x2="${s.x + 5}" y2="${s.y - 5}"/></g>`
+    )
+    .join('');
+  const pend = pending
+    ? `<circle cx="${pending.x}" cy="${pending.y}" r="9" fill="none" stroke="var(--off)" stroke-width="3" stroke-dasharray="4 3"/>`
+    : '';
+  return `
+    <svg id="court" viewBox="0 0 ${COURT.w} ${COURT.h}" class="court">
+      <rect x="1" y="1" width="448" height="418" fill="var(--court-bg)" ${line}/>
+      <rect x="151.5" y="1" width="147" height="173" ${line}/>
+      <path d="M171 174 A54 54 0 0 0 279 174" ${line} stroke-dasharray="6 5"/>
+      <path d="M171 174 A54 54 0 0 1 279 174" ${line}/>
+      <path d="M187.5 47 A37.5 37.5 0 0 0 262.5 47" ${line}/>
+      <line x1="198" y1="36" x2="252" y2="36" ${line}/>
+      <circle cx="225" cy="47" r="7" ${line}/>
+      <path d="M27 1 V89.4 A202.5 202.5 0 0 0 423 89.4 V1" ${line}/>
+      ${dots}${pend}
+    </svg>`;
+}
+
+function zoneTable(shots) {
+  return `
+    <table class="table">
+      <tr><th>Zone</th><th>Réussis</th><th>Tentés</th><th>%</th></tr>
+      ${zoneStats(shots)
+        .map((z) => `<tr><td>${z.label}</td><td>${z.made}</td><td>${z.att}</td><td>${pct(z.pct)}</td></tr>`)
+        .join('')}
+    </table>`;
+}
+
+function renderTirs() {
+  const shots = state.current.shots.filter((s) => s.side === shotSide);
+  const last = state.current.shots.length;
+  return `
+    <div class="seg">
+      <button class="seg-btn ${shotSide === 'off' ? 'active off' : ''}" data-shotside="off">Nous</button>
+      <button class="seg-btn ${shotSide === 'def' ? 'active def' : ''}" data-shotside="def">Adversaire</button>
+    </div>
+    <p class="hint">${pendingShot ? 'Tir placé : choisis le résultat.' : 'Touche le terrain à l\'endroit du tir.'}</p>
+    ${courtSvg(shots, pendingShot)}
+    <div class="shot-actions">
+      <button id="shotMade" class="shot-btn made" ${pendingShot ? '' : 'disabled'}>✓ Réussi</button>
+      <button id="shotMiss" class="shot-btn miss" ${pendingShot ? '' : 'disabled'}>✗ Raté</button>
+    </div>
+    <div class="report-section" style="margin-top:14px">
+      <h3>Réussite par zone</h3>
+      ${zoneTable(shots)}
+    </div>
+    <p class="hint">${last} tir(s) placé(s) sur le match. Chaque tir met aussi à jour 2PM/2PR/3PM/3PR.</p>`;
 }
 
 // ---------- Rendu ----------
@@ -289,6 +395,16 @@ function renderRapport() {
       ${compareStat('Perte de balle %', off.tov, def.tov, pct)}
     </div>
 
+    ${
+      (match.shots || []).length
+        ? `<div class="report-section">
+      <h3>Carte des tirs — nous</h3>
+      ${courtSvg((match.shots || []).filter((x) => x.side === 'off'), null)}
+      ${zoneTable((match.shots || []).filter((x) => x.side === 'off'))}
+    </div>`
+        : ''
+    }
+
     <div class="report-section">
       <h3>Répartition des tirs</h3>
       <table class="table">
@@ -358,6 +474,7 @@ function escapeHtml(str) {
 function render() {
   const app = document.getElementById('app');
   if (activeTab === 'saisie') app.innerHTML = renderSaisie();
+  else if (activeTab === 'tirs') app.innerHTML = renderTirs();
   else if (activeTab === 'rapport') app.innerHTML = renderRapport();
   else app.innerHTML = renderHistorique();
 
@@ -383,6 +500,22 @@ function attachDynamicListeners() {
   });
   const saveBtn = document.getElementById('saveMatchBtn');
   if (saveBtn) saveBtn.addEventListener('click', saveMatchToHistory);
+
+  const court = document.getElementById('court');
+  if (court && activeTab === 'tirs') {
+    court.addEventListener('click', (e) => {
+      const r = court.getBoundingClientRect();
+      const x = ((e.clientX - r.left) / r.width) * COURT.w;
+      const y = ((e.clientY - r.top) / r.height) * COURT.h;
+      pendingShot = { x: Math.max(2, Math.min(COURT.w - 2, x)), y: Math.max(2, Math.min(COURT.h - 2, y)) };
+      render();
+    });
+    document.getElementById('shotMade').addEventListener('click', () => pendingShot && addShot(shotSide, pendingShot.x, pendingShot.y, true));
+    document.getElementById('shotMiss').addEventListener('click', () => pendingShot && addShot(shotSide, pendingShot.x, pendingShot.y, false));
+    document.querySelectorAll('[data-shotside]').forEach((b) =>
+      b.addEventListener('click', () => { shotSide = b.dataset.shotside; pendingShot = null; render(); })
+    );
+  }
 
   const exportBtn = document.getElementById('exportPdfBtn');
   if (exportBtn) exportBtn.addEventListener('click', () => window.print());
