@@ -258,73 +258,70 @@ function courtSvg(shots, pending) {
     </svg>`;
 }
 
-function zoneTable(shots) {
+function zoneTable(shots, counters) {
+  let extra = '';
+  if (counters) {
+    const att = counters.a + counters.b + counters.c + counters.d;
+    const made = counters.a + counters.c;
+    const mappedMade = shots.filter((x) => x.made).length;
+    const unAtt = att - shots.length;
+    const unMade = made - mappedMade;
+    if (unAtt > 0) {
+      extra = `<tr><td>Non localisés</td><td>${unMade}</td><td>${unAtt}</td><td>${pct(unAtt ? unMade / unAtt : null)}</td></tr>`;
+    }
+  }
   return `
     <table class="table">
       <tr><th>Zone</th><th>Réussis</th><th>Tentés</th><th>%</th></tr>
       ${zoneStats(shots)
         .map((z) => `<tr><td>${z.label}</td><td>${z.made}</td><td>${z.att}</td><td>${pct(z.pct)}</td></tr>`)
         .join('')}
+      ${extra}
     </table>`;
 }
 
-function renderTirs() {
-  const shots = state.current.shots.filter((s) => s.side === shotSide);
-  const last = state.current.shots.length;
-  return `
-    <div class="seg">
-      <button class="seg-btn ${shotSide === 'off' ? 'active off' : ''}" data-shotside="off">Nous</button>
-      <button class="seg-btn ${shotSide === 'def' ? 'active def' : ''}" data-shotside="def">Adversaire</button>
-    </div>
-    <p class="hint">${pendingShot ? 'Tir placé : choisis le résultat.' : 'Touche le terrain à l\'endroit du tir.'}</p>
-    ${courtSvg(shots, pendingShot)}
-    <div class="shot-actions">
-      <button id="shotMade" class="shot-btn made" ${pendingShot ? '' : 'disabled'}>✓ Réussi</button>
-      <button id="shotMiss" class="shot-btn miss" ${pendingShot ? '' : 'disabled'}>✗ Raté</button>
-    </div>
-    <div class="report-section" style="margin-top:14px">
-      <h3>Réussite par zone</h3>
-      ${zoneTable(shots)}
-    </div>
-    <p class="hint">${last} tir(s) placé(s) sur le match. Chaque tir met aussi à jour 2PM/2PR/3PM/3PR.</p>`;
-}
-
-// ---------- Rendu ----------
+const SHOT_KEYS = ['a', 'b', 'c', 'd'];
 
 function renderStatGrid(side) {
   const data = state.current[side];
   return `
     <div class="stat-grid">
-      ${STAT_KEYS.map(
-        ({ key, short }) => `
+      ${STAT_KEYS.filter(({ key }) => !SHOT_KEYS.includes(key))
+        .map(
+          ({ key, short }) => `
         <button class="stat-btn" data-side="${side}" data-key="${key}" data-action="inc">
           <span class="minus" data-side="${side}" data-key="${key}" data-action="dec">−</span>
           <span class="short">${short}</span>
           <span class="count">${data[key]}</span>
         </button>`
-      ).join('')}
+        )
+        .join('')}
     </div>`;
 }
 
 function renderSaisie() {
-  const off = computeSide(state.current.off);
-  const def = computeSide(state.current.def);
+  const side = shotSide;
+  const data = state.current[side];
+  const sum = computeSide(data);
+  const shots = state.current.shots.filter((x) => x.side === side);
+  const ctl = (n) => (pendingShot ? '' : 'disabled');
   return `
-    <div class="side-block off">
-      <div class="side-header">
-        <span>ATTAQUE (nous)</span>
-        <span class="summary">${off.pts} pts · ${off.poss} poss · PPP ${num(off.ppp)}</span>
-      </div>
-      ${renderStatGrid('off')}
+    <div class="seg">
+      <button class="seg-btn ${side === 'off' ? 'active off' : ''}" data-shotside="off">Nous</button>
+      <button class="seg-btn ${side === 'def' ? 'active def' : ''}" data-shotside="def">Adversaire</button>
     </div>
-    <div class="side-block def">
-      <div class="side-header">
-        <span>DÉFENSE (adversaire)</span>
-        <span class="summary">${def.pts} pts · ${def.poss} poss · PPP ${num(def.ppp)}</span>
-      </div>
-      ${renderStatGrid('def')}
+    <div class="shot-summary">
+      <span>${sum.pts} pts · ${sum.poss} poss · PPP ${num(sum.ppp)}</span>
+      <span>2pts ${data.a}/${data.a + data.b} · 3pts ${data.c}/${data.c + data.d}</span>
     </div>
-    <button id="saveMatchBtn" class="icon-btn" style="width:100%;border-radius:12px;padding:12px;font-size:14px;font-weight:700;margin-top:6px;">
+    ${courtSvg(shots, pendingShot)}
+    <div class="shot-actions">
+      <button id="shotMade" class="shot-btn made" ${ctl()}>✓ Réussi</button>
+      <button id="shotMiss" class="shot-btn miss" ${ctl()}>✗ Raté</button>
+    </div>
+    <p class="hint">${pendingShot ? 'Tir placé : choisis le résultat.' : 'Touche le terrain à l\'endroit du tir.'}</p>
+    ${renderStatGrid(side)}
+    <button id="saveMatchBtn" class="icon-btn" style="width:100%;border-radius:12px;padding:12px;font-size:14px;font-weight:700;margin-top:10px;">
       ✓ Terminer &amp; enregistrer le match
     </button>
   `;
@@ -395,15 +392,19 @@ function renderRapport() {
       ${compareStat('Perte de balle %', off.tov, def.tov, pct)}
     </div>
 
-    ${
-      (match.shots || []).length
-        ? `<div class="report-section">
-      <h3>Carte des tirs — nous</h3>
-      ${courtSvg((match.shots || []).filter((x) => x.side === 'off'), null)}
-      ${zoneTable((match.shots || []).filter((x) => x.side === 'off'))}
-    </div>`
-        : ''
-    }
+    ${(match.shots || []).length
+      ? [['off', 'nous'], ['def', 'adversaire']]
+          .map(([sd, lbl]) => {
+            const sh = match.shots.filter((x) => x.side === sd);
+            if (!sh.length) return '';
+            return `<div class="report-section">
+      <h3>Carte des tirs — ${lbl}</h3>
+      ${courtSvg(sh, null)}
+      ${zoneTable(sh, match[sd])}
+    </div>`;
+          })
+          .join('')
+      : ''}
 
     <div class="report-section">
       <h3>Répartition des tirs</h3>
@@ -474,7 +475,6 @@ function escapeHtml(str) {
 function render() {
   const app = document.getElementById('app');
   if (activeTab === 'saisie') app.innerHTML = renderSaisie();
-  else if (activeTab === 'tirs') app.innerHTML = renderTirs();
   else if (activeTab === 'rapport') app.innerHTML = renderRapport();
   else app.innerHTML = renderHistorique();
 
@@ -502,7 +502,7 @@ function attachDynamicListeners() {
   if (saveBtn) saveBtn.addEventListener('click', saveMatchToHistory);
 
   const court = document.getElementById('court');
-  if (court && activeTab === 'tirs') {
+  if (court && activeTab === 'saisie') {
     court.addEventListener('click', (e) => {
       const r = court.getBoundingClientRect();
       const x = ((e.clientX - r.left) / r.width) * COURT.w;

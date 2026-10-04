@@ -447,3 +447,15 @@ main#app {
 .shot-btn.made:not(:disabled) { background: #1d3d2a; border-color: var(--good); color: var(--good); }
 .shot-btn.miss:not(:disabled) { background: #3d201d; border-color: var(--bad); color: var(--bad); }
 .shot-btn:disabled { opacity: 0.35; }
+
+/* Saisie fusionnée : terrain + stats */
+.shot-summary { display: flex; justify-content: space-between; gap: 8px; margin: 8px 0; font-size: 12px; color: var(--text-dim); }
+.court { max-height: 34dvh; margin: 0 auto; }
+#app .stat-grid { grid-template-columns: repeat(4, 1fr); padding: 0; background: none; }
+#app .stat-btn { min-height: 54px; padding: 6px 2px; }
+#app .stat-btn .count { font-size: 18px; }
+.shot-actions { margin-top: 8px; }
+.shot-btn { padding: 12px; }
+.hint { margin: 4px 0 8px; }
+#app .stat-btn .minus { top: 0; right: 1px; padding: 2px 4px; font-size: 12px; }
+#app .stat-btn .short { font-size: 11px; }

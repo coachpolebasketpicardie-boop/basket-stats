@@ -33,10 +33,11 @@ requis pour la plupart des navigateurs).
 
 ## Utilisation
 
-1. Onglet **Saisie** : renseigner l'adversaire et la date, puis taper sur les cases pour
-   incrémenter chaque statistique (tirs, rebonds, pertes de balle, fautes, lancers francs...).
-   Un tap sur le petit "−" en haut à droite d'une case décrémente. Le bouton en bas permet
-   d'annuler la dernière saisie en cas d'erreur de manipulation.
+1. Onglet **Saisie** (un seul écran) : renseigner l'adversaire et la date, choisir **Nous** ou
+   **Adversaire**, toucher le demi-terrain à l'endroit du tir puis **Réussi** / **Raté**. Le tir
+   met à jour automatiquement 2PM/2PR/3PM/3PR (2 ou 3 pts selon la ligne à 3 points). Les autres
+   stats (RO, BP, fautes, lancers francs, AND1, touche) sont les boutons juste en dessous ; le petit
+   "−" corrige. Le bouton du bas annule la dernière saisie (tir placé compris).
 2. Onglet **Rapport** : indicateurs calculés en direct, attaque vs défense.
 3. Bouton "Terminer & enregistrer le match" : archive le match dans l'**Historique** et repart
    sur une saisie vierge.
