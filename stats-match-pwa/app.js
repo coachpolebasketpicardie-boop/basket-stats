@@ -32,22 +32,30 @@ function emptyMatch() {
     off: emptySide(),
     def: emptySide(),
     shots: [],
+    fouls: [],
+    onCourt: [],
+    quarter: 1,
   };
 }
 
 function loadState() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return { current: emptyMatch(), history: [], actionLog: [] };
+    if (!raw) return { current: emptyMatch(), history: [], actionLog: [], roster: [] };
     const parsed = JSON.parse(raw);
-    if (parsed.current && !parsed.current.shots) parsed.current.shots = [];
+    const cur = parsed.current || emptyMatch();
+    if (!cur.shots) cur.shots = [];
+    if (!cur.fouls) cur.fouls = [];
+    if (!cur.onCourt) cur.onCourt = [];
+    if (!cur.quarter) cur.quarter = 1;
     return {
-      current: parsed.current || emptyMatch(),
+      current: cur,
       history: parsed.history || [],
       actionLog: parsed.actionLog || [],
+      roster: parsed.roster || [],
     };
   } catch (e) {
-    return { current: emptyMatch(), history: [], actionLog: [] };
+    return { current: emptyMatch(), history: [], actionLog: [], roster: [] };
   }
 }
 
@@ -112,6 +120,10 @@ function increment(side, key, delta) {
   s[key] = next;
   if (delta > 0) {
     state.actionLog.push({ side, key });
+  } else {
+    const idx = state.actionLog.map((a) => a.side + a.key).lastIndexOf(side + key);
+    if (idx >= 0) state.actionLog.splice(idx, 1);
+    if (key === 'g' || key === 'h') removeLastFoul(side, key === 'g' ? 'out' : 'lf');
   }
   saveState();
   render();
@@ -123,6 +135,7 @@ function undoLast() {
   const s = state.current[last.side];
   if (s[last.key] > 0) s[last.key] -= 1;
   if (last.shot) state.current.shots.pop();
+  if (last.foul) state.current.fouls.pop();
   saveState();
   render();
 }
@@ -144,6 +157,7 @@ function saveMatchToHistory() {
     savedAt: new Date().toISOString(),
     finalOffPts: off.pts,
     finalDefPts: def.pts,
+    roster: state.roster.map((pl) => ({ ...pl })),
   };
   state.history.unshift(entry);
   state.current = emptyMatch();
@@ -180,11 +194,221 @@ function showToast(msg) {
 function switchTab(tab) {
   activeTab = tab;
   pendingShot = null;
+  pendingFoul = null;
   if (tab !== 'rapport') viewingHistoryId = null;
   document.querySelectorAll('.tab-btn').forEach((b) => {
     b.classList.toggle('active', b.dataset.tab === tab);
   });
   render();
+}
+
+// ---------- Fautes par joueur, terrain / banc, quart-temps ----------
+// Convention de la feuille : F OUT / F LF d'un bloc = fautes provoquées par ce camp.
+// Nos fautes sont donc celles saisies dans le bloc "Adversaire" (side === 'def').
+
+const PERIODS = ['Q1', 'Q2', 'Q3', 'Q4', 'P'];
+const FOUL_LIMIT = 5;
+let pendingFoul = null;
+
+function periodGroup(q) {
+  return q === 5 ? 4 : q;
+}
+
+function teamFouls(fouls, side, q) {
+  return fouls.filter((f) => f.side === side && periodGroup(f.q) === periodGroup(q)).length;
+}
+
+function playerFouls(fouls, playerId) {
+  const mine = fouls.filter((f) => f.side === 'def' && f.playerId === playerId);
+  const out = mine.filter((f) => f.type === 'out').length;
+  return { out, lf: mine.length - out, total: mine.length };
+}
+
+function foulLevel(n) {
+  if (n >= 5) return 'out';
+  if (n === 4) return 'warn';
+  if (n === 3) return 'watch';
+  return '';
+}
+
+function addFoul(side, key, playerId) {
+  state.current[side][key] += 1;
+  state.current.fouls.push({
+    side,
+    type: key === 'g' ? 'out' : 'lf',
+    q: state.current.quarter,
+    playerId: playerId || null,
+  });
+  state.actionLog.push({ side, key, foul: true });
+  pendingFoul = null;
+  saveState();
+  render();
+}
+
+function removeLastFoul(side, type) {
+  const f = state.current.fouls;
+  for (let i = f.length - 1; i >= 0; i--) {
+    if (f[i].side === side && f[i].type === type) {
+      f.splice(i, 1);
+      return;
+    }
+  }
+}
+
+function removePlayerFoul(playerId) {
+  const f = state.current.fouls;
+  for (let i = f.length - 1; i >= 0; i--) {
+    if (f[i].side === 'def' && f[i].playerId === playerId) {
+      const key = f[i].type === 'out' ? 'g' : 'h';
+      f.splice(i, 1);
+      if (state.current.def[key] > 0) state.current.def[key] -= 1;
+      const idx = state.actionLog.map((a) => a.side + a.key).lastIndexOf('def' + key);
+      if (idx >= 0) state.actionLog.splice(idx, 1);
+      break;
+    }
+  }
+  saveState();
+  render();
+}
+
+function sortedRoster() {
+  const on = state.current.onCourt;
+  return [...state.roster].sort((a, b) => {
+    const da = on.includes(a.id) ? 0 : 1;
+    const db = on.includes(b.id) ? 0 : 1;
+    return da - db || (parseInt(a.num, 10) || 0) - (parseInt(b.num, 10) || 0);
+  });
+}
+
+function pips(n, max = FOUL_LIMIT) {
+  let out = '';
+  for (let i = 0; i < max; i++) out += `<span class="pip ${i < n ? 'on' : ''}"></span>`;
+  return out;
+}
+
+function playerLabel(p) {
+  return `<b>#${escapeHtml(p.num || '?')}</b> ${escapeHtml(p.name || '')}`;
+}
+
+function renderFoulPicker() {
+  const m = state.current;
+  const type = pendingFoul.key === 'g' ? 'F OUT' : 'F LF';
+  return `
+    <div class="foul-backdrop" id="foulCancel"></div>
+    <div class="foul-sheet">
+      <div class="foul-title">Faute de qui ? <span>${type} · ${PERIODS[m.quarter - 1]}</span></div>
+      <div class="foul-grid">
+        ${sortedRoster()
+          .map((p) => {
+            const n = playerFouls(m.fouls, p.id).total;
+            return `<button class="foul-player ${m.onCourt.includes(p.id) ? 'on' : ''} lvl-${foulLevel(n)}" data-pickplayer="${p.id}">
+              <span>${playerLabel(p)}</span><span class="pips lvl-${foulLevel(n)}">${pips(n)}</span>
+            </button>`;
+          })
+          .join('')}
+      </div>
+      <div class="foul-footer">
+        <button class="foul-player" data-pickplayer="">Sans joueur</button>
+        <button class="foul-player" id="foulCancelBtn">Annuler</button>
+      </div>
+    </div>`;
+}
+
+function renderEquipe() {
+  const m = state.current;
+  const q = m.quarter;
+  const ours = teamFouls(m.fouls, 'def', q);
+  const theirs = teamFouls(m.fouls, 'off', q);
+  const on = m.onCourt.length;
+  const plural = (n) => `${n} faute${n > 1 ? 's' : ''}`;
+  return `
+    <div class="period-row">
+      ${PERIODS.map((p, i) => `<button class="period-btn ${q === i + 1 ? 'active' : ''}" data-period="${i + 1}">${p}</button>`).join('')}
+    </div>
+    <div class="team-fouls">
+      <div class="tf-card">
+        <div class="tf-title"><span>Nous</span><span>${plural(ours)}</span></div>
+        <div class="pips lvl-${foulLevel(ours)}">${pips(ours)}</div>
+        ${ours >= 4 ? '<div class="badge bad">Adversaire en bonus</div>' : '<div class="badge none">&nbsp;</div>'}
+      </div>
+      <div class="tf-card">
+        <div class="tf-title"><span>Adversaire</span><span>${plural(theirs)}</span></div>
+        <div class="pips lvl-${foulLevel(theirs)}">${pips(theirs)}</div>
+        ${theirs >= 4 ? '<div class="badge good">Nous en bonus</div>' : '<div class="badge none">&nbsp;</div>'}
+      </div>
+    </div>
+    <h3 class="sec-title">Joueurs <span class="${on === 5 ? '' : 'warn-text'}">${on}/5 sur le terrain</span></h3>
+    ${
+      state.roster.length === 0
+        ? '<div class="empty-state" style="padding:16px 0">Ajoute ton effectif ci-dessous pour suivre les fautes par joueur.</div>'
+        : sortedRoster()
+            .map((p) => {
+              const f = playerFouls(m.fouls, p.id);
+              const isOn = m.onCourt.includes(p.id);
+              return `<div class="player-row ${isOn ? 'on' : ''}">
+                <button class="court-toggle ${isOn ? 'on' : ''}" data-toggle="${p.id}">${isOn ? 'Terrain' : 'Banc'}</button>
+                <div class="p-name">${playerLabel(p)}${f.total >= FOUL_LIMIT ? ' <span class="badge bad">Éliminé</span>' : ''}</div>
+                <div class="p-fouls">
+                  <div class="pips lvl-${foulLevel(f.total)}">${pips(f.total)}</div>
+                  <div class="p-detail">${f.out} simple${f.out > 1 ? 's' : ''} · ${f.lf} LF</div>
+                </div>
+                <button class="p-minus" data-undofoul="${p.id}" ${f.total ? '' : 'disabled'} title="Retirer sa dernière faute">−</button>
+              </div>`;
+            })
+            .join('')
+    }
+    <h3 class="sec-title">Effectif</h3>
+    <div class="roster-form">
+      <input id="newNum" type="text" inputmode="numeric" maxlength="3" placeholder="N°" />
+      <input id="newName" type="text" maxlength="20" placeholder="Prénom / nom" />
+      <button id="addPlayerBtn" class="icon-btn" style="width:auto;padding:0 14px;font-size:14px">Ajouter</button>
+    </div>
+    <div class="roster-chips">
+      ${state.roster
+        .map((p) => `<span class="chip">${playerLabel(p)} <button data-delplayer="${p.id}" aria-label="Retirer">✕</button></span>`)
+        .join('')}
+    </div>`;
+}
+
+function renderFoulReport(match) {
+  const fouls = match.fouls || [];
+  const roster = match === state.current ? state.roster : match.roster || [];
+  const total = match.def.g + match.def.h;
+  if (!fouls.length && !total) return '';
+  let html = '';
+  if (fouls.length) {
+    const row = (label, side) =>
+      `<tr><td>${label}</td>${[1, 2, 3, 4, 5].map((q) => `<td>${fouls.filter((f) => f.side === side && f.q === q).length}</td>`).join('')}</tr>`;
+    html += `<div class="report-section">
+      <h3>Fautes d'équipe par période</h3>
+      <table class="table">
+        <tr><th></th>${PERIODS.map((p) => `<th>${p}</th>`).join('')}</tr>
+        ${row('Nous', 'def')}${row('Adversaire', 'off')}
+      </table>
+      <p class="hint">Bonus à partir de 4 fautes d'équipe dans le quart-temps (la prolongation compte avec le Q4).</p>
+    </div>`;
+  }
+  let attributed = 0;
+  const rows = roster
+    .map((p) => {
+      const f = playerFouls(fouls, p.id);
+      attributed += f.total;
+      return { p, f };
+    })
+    .filter((r) => r.f.total > 0)
+    .sort((a, b) => b.f.total - a.f.total)
+    .map(({ p, f }) => `<tr><td>${playerLabel(p)}</td><td>${f.out}</td><td>${f.lf}</td><td><b>${f.total}</b></td></tr>`)
+    .join('');
+  const rest = total - attributed;
+  html += `<div class="report-section">
+    <h3>Nos fautes par joueur</h3>
+    <table class="table">
+      <tr><th>Joueur</th><th>Simples</th><th>LF</th><th>Total</th></tr>
+      ${rows}
+      ${rest > 0 ? `<tr><td>Sans joueur</td><td colspan="2"></td><td><b>${rest}</b></td></tr>` : ''}
+    </table>
+  </div>`;
+  return html;
 }
 
 // ---------- Carte des tirs (demi-terrain FIBA, 30 px = 1 m) ----------
@@ -309,6 +533,7 @@ function renderSaisie() {
     <div class="seg">
       <button class="seg-btn ${side === 'off' ? 'active off' : ''}" data-shotside="off">Nous</button>
       <button class="seg-btn ${side === 'def' ? 'active def' : ''}" data-shotside="def">Adversaire</button>
+      <button class="seg-btn q-btn lvl-${foulLevel(teamFouls(state.current.fouls, 'def', state.current.quarter))}" id="quarterBtn">${PERIODS[state.current.quarter - 1]} · ${teamFouls(state.current.fouls, 'def', state.current.quarter)}F</button>
     </div>
     <div class="shot-summary">
       <span>${sum.pts} pts · ${sum.poss} poss · PPP ${num(sum.ppp)}</span>
@@ -324,6 +549,7 @@ function renderSaisie() {
     <button id="saveMatchBtn" class="icon-btn" style="width:100%;border-radius:12px;padding:12px;font-size:14px;font-weight:700;margin-top:10px;">
       ✓ Terminer &amp; enregistrer le match
     </button>
+    ${pendingFoul ? renderFoulPicker() : ''}
   `;
 }
 
@@ -424,6 +650,8 @@ function renderRapport() {
       </table>
     </div>
 
+    ${renderFoulReport(match)}
+
     <div class="report-section">
       <h3>Points marqués par type</h3>
       <table class="table">
@@ -475,6 +703,7 @@ function escapeHtml(str) {
 function render() {
   const app = document.getElementById('app');
   if (activeTab === 'saisie') app.innerHTML = renderSaisie();
+  else if (activeTab === 'equipe') app.innerHTML = renderEquipe();
   else if (activeTab === 'rapport') app.innerHTML = renderRapport();
   else app.innerHTML = renderHistorique();
 
@@ -489,7 +718,17 @@ function attachDynamicListeners() {
   document.querySelectorAll('[data-action="inc"]').forEach((btn) => {
     btn.addEventListener('click', (e) => {
       if (e.target.dataset.action === 'dec') return; // handled separately
-      increment(btn.dataset.side, btn.dataset.key, 1);
+      const { side, key } = btn.dataset;
+      if (key === 'g' || key === 'h') {
+        if (side === 'def' && state.roster.length) {
+          pendingFoul = { key };
+          render();
+        } else {
+          addFoul(side, key, null);
+        }
+        return;
+      }
+      increment(side, key, 1);
     });
   });
   document.querySelectorAll('[data-action="dec"]').forEach((btn) => {
@@ -516,6 +755,64 @@ function attachDynamicListeners() {
       b.addEventListener('click', () => { shotSide = b.dataset.shotside; pendingShot = null; render(); })
     );
   }
+
+  const qBtn = document.getElementById('quarterBtn');
+  if (qBtn) {
+    qBtn.addEventListener('click', () => {
+      state.current.quarter = (state.current.quarter % 5) + 1;
+      saveState();
+      render();
+    });
+  }
+  document.querySelectorAll('[data-pickplayer]').forEach((b) =>
+    b.addEventListener('click', () => pendingFoul && addFoul('def', pendingFoul.key, b.dataset.pickplayer))
+  );
+  ['foulCancel', 'foulCancelBtn'].forEach((id) => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('click', () => { pendingFoul = null; render(); });
+  });
+
+  document.querySelectorAll('[data-period]').forEach((b) =>
+    b.addEventListener('click', () => {
+      state.current.quarter = Number(b.dataset.period);
+      saveState();
+      render();
+    })
+  );
+  document.querySelectorAll('[data-toggle]').forEach((b) =>
+    b.addEventListener('click', () => {
+      const on = state.current.onCourt;
+      const i = on.indexOf(b.dataset.toggle);
+      if (i >= 0) on.splice(i, 1);
+      else on.push(b.dataset.toggle);
+      saveState();
+      render();
+    })
+  );
+  document.querySelectorAll('[data-undofoul]').forEach((b) =>
+    b.addEventListener('click', () => removePlayerFoul(b.dataset.undofoul))
+  );
+  const addBtn = document.getElementById('addPlayerBtn');
+  if (addBtn) {
+    addBtn.addEventListener('click', () => {
+      const num = document.getElementById('newNum').value.trim();
+      const name = document.getElementById('newName').value.trim();
+      if (!num && !name) return;
+      state.roster.push({ id: Date.now().toString(36) + Math.random().toString(36).slice(2, 5), num, name });
+      saveState();
+      render();
+    });
+  }
+  document.querySelectorAll('[data-delplayer]').forEach((b) =>
+    b.addEventListener('click', () => {
+      const p = state.roster.find((x) => x.id === b.dataset.delplayer);
+      if (!p || !confirm(`Retirer #${p.num} ${p.name} de l'effectif ?`)) return;
+      state.roster = state.roster.filter((x) => x.id !== p.id);
+      state.current.onCourt = state.current.onCourt.filter((id) => id !== p.id);
+      saveState();
+      render();
+    })
+  );
 
   const exportBtn = document.getElementById('exportPdfBtn');
   if (exportBtn) exportBtn.addEventListener('click', () => window.print());

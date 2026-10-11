@@ -38,10 +38,17 @@ requis pour la plupart des navigateurs).
    met à jour automatiquement 2PM/2PR/3PM/3PR (2 ou 3 pts selon la ligne à 3 points). Les autres
    stats (RO, BP, fautes, lancers francs, AND1, touche) sont les boutons juste en dessous ; le petit
    "−" corrige. Le bouton du bas annule la dernière saisie (tir placé compris).
-2. Onglet **Rapport** : indicateurs calculés en direct, attaque vs défense.
-3. Bouton "Terminer & enregistrer le match" : archive le match dans l'**Historique** et repart
+2. Onglet **Équipe** : saisir l'effectif une fois (n° + prénom, mémorisé sur le téléphone), marquer
+   qui est **sur le terrain / banc**, choisir le **quart-temps** (Q1 à Q4, P = prolongation) et suivre
+   les fautes par joueur (pastilles, rouge à 5 = éliminé) et les fautes d'équipe du quart-temps
+   (bonus à partir de 4). Sur l'écran Saisie, en mode **Adversaire**, F OUT / F LF ouvrent la liste
+   des joueurs pour attribuer notre faute (convention de la feuille : nos fautes sont celles
+   provoquées par l'adversaire). Le bouton « Q1 · 2F » de Saisie fait défiler le quart-temps.
+3. Onglet **Rapport** : indicateurs calculés en direct, attaque vs défense, fautes par période et
+   par joueur.
+4. Bouton "Terminer & enregistrer le match" : archive le match dans l'**Historique** et repart
    sur une saisie vierge.
-4. Onglet **Historique** : liste des matchs enregistrés, consultation du rapport, suppression.
+5. Onglet **Historique** : liste des matchs enregistrés, consultation du rapport, suppression.
 
 ## Formules
 
